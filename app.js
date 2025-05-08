@@ -2,29 +2,40 @@
 let currentUser = {
     id: '',
     name: '',
-    avatar: ''
+    avatar: 'https://i.imgur.com/JgYD2nQ.png'
 };
 
 // PeerJS connection
 let peer;
-let currentCall;
 let connections = {};
 let audioStream;
 let isMuted = false;
-let isSpeakerOn = true;
+let isHearingMyself = false;
+let audioContext;
+let mediaStreamSource;
+let localAudioBuffer;
+let selfAudioElement;
+
+// Banned words list
+const bannedWords = ['asu', 'dick', 'fuck', 'shit', 'bitch', 'asshole', 'kontol', 'memek', 'ngentot', 'bangsat'];
 
 // DOM Elements
 const loadingScreen = document.getElementById('loadingScreen');
-const skipLoadingBtn = document.getElementById('skipLoadingBtn');
-const loginScreen = document.getElementById('loginScreen');
-const googleLoginBtn = document.getElementById('googleLoginBtn');
-const profileSetup = document.getElementById('profileSetup');
+const usernameScreen = document.getElementById('usernameScreen');
+const profilePreview = document.getElementById('profilePreview');
+const profileUpload = document.getElementById('profileUpload');
+const changePhotoBtn = document.getElementById('changePhotoBtn');
 const usernameInput = document.getElementById('usernameInput');
-const continueBtn = document.getElementById('continueBtn');
-const profileImage = document.getElementById('profileImage');
+const usernameError = document.getElementById('usernameError');
+const startBtn = document.getElementById('startBtn');
 const app = document.getElementById('app');
 const userAvatar = document.getElementById('userAvatar');
 const usernameDisplay = document.getElementById('usernameDisplay');
+const aiHelpBtn = document.getElementById('aiHelpBtn');
+const aiChat = document.getElementById('aiChat');
+const closeAiBtn = document.getElementById('closeAiBtn');
+const aiMessages = document.getElementById('aiMessages');
+const aiInput = document.getElementById('aiInput');
 
 // Tab elements
 const friendsTab = document.getElementById('friendsTab');
@@ -39,6 +50,7 @@ const addFriendModal = document.getElementById('addFriendModal');
 const friendSearch = document.getElementById('friendSearch');
 const searchResults = document.getElementById('searchResults');
 const cancelAddFriendBtn = document.getElementById('cancelAddFriendBtn');
+const confirmAddFriendBtn = document.getElementById('confirmAddFriendBtn');
 
 // Group elements
 const createGroupBtn = document.getElementById('createGroupBtn');
@@ -60,8 +72,8 @@ const voiceChatScreen = document.getElementById('voiceChatScreen');
 const currentGroupName = document.getElementById('currentGroupName');
 const currentGroupCode = document.getElementById('currentGroupCode');
 const participantsList = document.getElementById('participantsList');
+const hearMyselfBtn = document.getElementById('hearMyselfBtn');
 const muteBtn = document.getElementById('muteBtn');
-const speakerBtn = document.getElementById('speakerBtn');
 const disconnectBtn = document.getElementById('disconnectBtn');
 
 // Mock data
@@ -72,8 +84,8 @@ const mockUsers = [
 ];
 
 const mockGroups = [
-    { id: 'ABC123', name: 'Epic Gamers', members: 3 },
-    { id: 'XYZ789', name: 'Pro Team', members: 5 }
+    { id: 'ABC123', name: 'Epic Gamers', members: ['GameMaster99', 'ProPlayer42'] },
+    { id: 'XYZ789', name: 'Pro Team', members: ['ProPlayer42'] }
 ];
 
 // Initialize the app
@@ -81,33 +93,46 @@ function init() {
     // Simulate loading
     setTimeout(() => {
         loadingScreen.classList.add('hidden');
-        loginScreen.classList.remove('hidden');
+        usernameScreen.classList.remove('hidden');
     }, 3000);
     
-    // Event listeners
-    skipLoadingBtn.addEventListener('click', () => {
-        loadingScreen.classList.add('hidden');
-        loginScreen.classList.remove('hidden');
-    });
-    
-    // Google login simulation
-    googleLoginBtn.addEventListener('click', () => {
-        // In a real app, this would use Google OAuth
-        currentUser = {
-            id: '1',
-            name: 'Player' + Math.floor(Math.random() * 1000),
-            avatar: 'https://i.imgur.com/JgYD2nQ.png'
-        };
-        
-        profileImage.src = currentUser.avatar;
-        profileSetup.classList.remove('hidden');
-    });
-    
-    continueBtn.addEventListener('click', () => {
-        if (usernameInput.value.trim()) {
-            currentUser.name = usernameInput.value.trim();
-            completeLogin();
+    // Profile picture upload
+    profileUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                profilePreview.src = event.target.result;
+                currentUser.avatar = event.target.result;
+            };
+            reader.readAsDataURL(file);
         }
+    });
+    
+    changePhotoBtn.addEventListener('click', () => {
+        profileUpload.click();
+    });
+    
+    // Username validation
+    usernameInput.addEventListener('input', (e) => {
+        const username = e.target.value.trim();
+        const containsBannedWord = bannedWords.some(word => 
+            username.toLowerCase().includes(word.toLowerCase())
+        );
+        
+        if (containsBannedWord) {
+            usernameError.classList.remove('hidden');
+            startBtn.disabled = true;
+        } else {
+            usernameError.classList.add('hidden');
+            startBtn.disabled = username.length < 3;
+        }
+    });
+    
+    startBtn.addEventListener('click', () => {
+        currentUser.name = usernameInput.value.trim();
+        currentUser.id = 'user-' + Math.random().toString(36).substr(2, 8);
+        completeLogin();
     });
     
     // Tab switching
@@ -125,27 +150,83 @@ function init() {
         friendsContent.classList.add('hidden');
     });
     
+    // AI Helper
+    aiHelpBtn.addEventListener('click', () => {
+        aiChat.classList.toggle('hidden');
+    });
+    
+    closeAiBtn.addEventListener('click', () => {
+        aiChat.classList.add('hidden');
+    });
+    
+    document.querySelectorAll('.ai-question-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const question = e.target.textContent.trim();
+            aiInput.value = question;
+            sendAiMessage(question);
+        });
+    });
+    
+    aiInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && aiInput.value.trim()) {
+            sendAiMessage(aiInput.value.trim());
+            aiInput.value = '';
+        }
+    });
+    
     // Friends
     addFriendBtn.addEventListener('click', () => {
         addFriendModal.classList.remove('hidden');
+        searchResults.innerHTML = '<div class="text-center py-4 text-gray-400">Search for a friend by exact username</div>';
     });
     
     cancelAddFriendBtn.addEventListener('click', () => {
         addFriendModal.classList.add('hidden');
+        friendSearch.value = '';
     });
     
     friendSearch.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        const results = mockUsers.filter(user => 
-            user.name.toLowerCase().includes(query) && user.id !== currentUser.id
-        );
+        const query = e.target.value.trim();
+        confirmAddFriendBtn.disabled = true;
         
-        displaySearchResults(results);
+        if (query.length < 3) {
+            searchResults.innerHTML = '<div class="text-center py-4 text-gray-400">Enter at least 3 characters</div>';
+            return;
+        }
+        
+        // Simulate API call delay
+        setTimeout(() => {
+            const results = mockUsers.filter(user => 
+                user.name.toLowerCase() === query.toLowerCase() && 
+                user.id !== currentUser.id
+            );
+            
+            if (results.length === 0) {
+                searchResults.innerHTML = `
+                    <div class="text-center py-4">
+                        <p class="text-gray-400">User not found</p>
+                        <p class="text-xs text-gray-500 mt-1">Make sure you entered the exact username</p>
+                    </div>
+                `;
+            } else {
+                displaySearchResults(results);
+                confirmAddFriendBtn.disabled = false;
+            }
+        }, 500);
+    });
+    
+    confirmAddFriendBtn.addEventListener('click', () => {
+        const username = friendSearch.value.trim();
+        alert(`Friend request sent to ${username}`);
+        addFriendModal.classList.add('hidden');
+        friendSearch.value = '';
+        loadFriends();
     });
     
     // Groups
     createGroupBtn.addEventListener('click', () => {
         createGroupModal.classList.remove('hidden');
+        groupNameInput.value = '';
     });
     
     confirmCreateGroupBtn.addEventListener('click', () => {
@@ -159,12 +240,19 @@ function init() {
     
     joinGroupBtn.addEventListener('click', () => {
         joinGroupModal.classList.remove('hidden');
+        groupCodeInput.value = '';
     });
     
     confirmJoinGroupBtn.addEventListener('click', () => {
-        if (groupCodeInput.value.trim().length === 6) {
-            joinGroupModal.classList.add('hidden');
-            startVoiceChat('Joined Group', groupCodeInput.value.trim().toUpperCase());
+        const code = groupCodeInput.value.trim().toUpperCase();
+        if (code.length === 6) {
+            const group = mockGroups.find(g => g.id === code);
+            if (group) {
+                joinGroupModal.classList.add('hidden');
+                startVoiceChat(group.name, group.id);
+            } else {
+                alert('Group not found. Please check the code and try again.');
+            }
         }
     });
     
@@ -179,8 +267,8 @@ function init() {
     });
     
     // Voice chat controls
+    hearMyselfBtn.addEventListener('click', toggleHearMyself);
     muteBtn.addEventListener('click', toggleMute);
-    speakerBtn.addEventListener('click', toggleSpeaker);
     disconnectBtn.addEventListener('click', endCall);
     
     // Initialize PeerJS when app starts
@@ -189,7 +277,7 @@ function init() {
 
 // Complete login process
 function completeLogin() {
-    loginScreen.classList.add('hidden');
+    usernameScreen.classList.add('hidden');
     app.classList.remove('hidden');
     
     userAvatar.src = currentUser.avatar;
@@ -198,15 +286,17 @@ function completeLogin() {
     // Load friends and groups
     loadFriends();
     loadGroups();
+    
+    // Show welcome message from AI
+    setTimeout(() => {
+        aiChat.classList.remove('hidden');
+    }, 1000);
 }
 
 // Initialize PeerJS for voice chat
 function initPeerJS() {
-    // Generate a random peer ID
-    const peerId = 'user-' + Math.random().toString(36).substr(2, 9);
-    
     // Create peer connection
-    peer = new Peer(peerId);
+    peer = new Peer(currentUser.id);
     
     peer.on('open', (id) => {
         console.log('PeerJS connected with ID:', id);
@@ -225,16 +315,24 @@ function initPeerJS() {
             // Add the remote stream to our connections
             connections[call.peer] = {
                 call: call,
-                stream: remoteStream
+                stream: remoteStream,
+                audioElement: new Audio()
             };
+            
+            // Set up audio element for remote stream
+            connections[call.peer].audioElement.srcObject = remoteStream;
+            connections[call.peer].audioElement.play();
             
             // Update UI with new participant
             updateParticipants();
         });
         
         call.on('close', () => {
-            delete connections[call.peer];
-            updateParticipants();
+            if (connections[call.peer]) {
+                connections[call.peer].audioElement.pause();
+                delete connections[call.peer];
+                updateParticipants();
+            }
         });
     });
 }
@@ -245,23 +343,47 @@ async function startVoiceChat(groupName, groupCode) {
         // Get user's microphone
         audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         
+        // Set up audio context for hearing self
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        mediaStreamSource = audioContext.createMediaStreamSource(audioStream);
+        localAudioBuffer = audioContext.createGain();
+        mediaStreamSource.connect(localAudioBuffer);
+        localAudioBuffer.gain.value = 0; // Start with self audio muted
+        
         // Show voice chat screen
         voiceChatScreen.classList.remove('hidden');
         currentGroupName.textContent = groupName;
         currentGroupCode.textContent = `Code: ${groupCode}`;
         
-        // In a real app, you would connect to other peers here
-        // For demo purposes, we'll just show the current user
+        // Update participants list
         updateParticipants();
         
-        // Add mock participants after a delay
-        setTimeout(() => {
-            addMockParticipants();
-        }, 1500);
+        // Connect to other group members (simulated)
+        simulateGroupConnections(groupCode);
     } catch (err) {
         console.error('Error accessing microphone:', err);
         alert('Could not access microphone. Please check permissions.');
     }
+}
+
+// Simulate connecting to group members
+function simulateGroupConnections(groupCode) {
+    const group = mockGroups.find(g => g.id === groupCode);
+    if (!group) return;
+    
+    // Simulate connecting to each member after a delay
+    group.members.forEach((member, index) => {
+        setTimeout(() => {
+            // In a real app, this would be an actual PeerJS connection
+            // For demo, we just add them to the participants list
+            addParticipant(
+                `mock-${index}`,
+                member,
+                'https://i.imgur.com/JgYD2nQ.png',
+                true
+            );
+        }, 1000 * (index + 1));
+    });
 }
 
 // Update participants list
@@ -269,23 +391,33 @@ function updateParticipants() {
     participantsList.innerHTML = '';
     
     // Add current user
-    addParticipant(currentUser.id, currentUser.name, currentUser.avatar, !isMuted);
+    addParticipant(
+        currentUser.id,
+        currentUser.name,
+        currentUser.avatar,
+        !isMuted,
+        true // isCurrentUser
+    );
     
     // Add connected peers
     for (const peerId in connections) {
-        const connection = connections[peerId];
-        addParticipant(peerId, `User-${peerId.substr(5, 3)}`, 'https://i.imgur.com/JgYD2nQ.png', true);
+        addParticipant(
+            peerId,
+            `User-${peerId.substr(5, 3)}`,
+            'https://i.imgur.com/JgYD2nQ.png',
+            true
+        );
     }
 }
 
 // Add a participant to the list
-function addParticipant(id, name, avatar, speaking) {
+function addParticipant(id, name, avatar, speaking, isCurrentUser = false) {
     const participant = document.createElement('div');
     participant.className = 'flex items-center p-3 bg-gray-800 rounded-lg';
     participant.innerHTML = `
         <img src="${avatar}" alt="${name}" class="w-10 h-10 rounded-full mr-3">
         <div class="flex-1">
-            <h4 class="font-medium">${name}</h4>
+            <h4 class="font-medium">${name} ${isCurrentUser ? '(You)' : ''}</h4>
             <p class="text-xs text-gray-400">${speaking ? 'Speaking' : 'Muted'}</p>
         </div>
         <div class="w-3 h-3 rounded-full ${speaking ? 'bg-green-500 pulse' : 'bg-gray-500'}"></div>
@@ -293,17 +425,20 @@ function addParticipant(id, name, avatar, speaking) {
     participantsList.appendChild(participant);
 }
 
-// Add mock participants for demo
-function addMockParticipants() {
-    // In a real app, these would be actual connections
-    const mockParticipants = [
-        { id: 'mock1', name: 'GameMaster99' },
-        { id: 'mock2', name: 'ProPlayer42' }
-    ];
+// Toggle hearing yourself
+function toggleHearMyself() {
+    isHearingMyself = !isHearingMyself;
     
-    mockParticipants.forEach(participant => {
-        addParticipant(participant.id, participant.name, 'https://i.imgur.com/JgYD2nQ.png', true);
-    });
+    if (isHearingMyself) {
+        // Connect local audio to destination (hear yourself)
+        localAudioBuffer.connect(audioContext.destination);
+        localAudioBuffer.gain.value = 1;
+        hearMyselfBtn.classList.add('hear-myself-active');
+    } else {
+        // Disconnect local audio
+        localAudioBuffer.disconnect();
+        hearMyselfBtn.classList.remove('hear-myself-active');
+    }
 }
 
 // Toggle mute
@@ -318,145 +453,15 @@ function toggleMute() {
     
     muteBtn.querySelector('div').className = isMuted ? 
         'w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center mb-1' :
-        'w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mb-1';
+        'w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mb-1 pulse';
     
     muteBtn.querySelector('span').textContent = isMuted ? 'Unmute' : 'Mute';
     
     updateParticipants();
 }
 
-// Toggle speaker
-function toggleSpeaker() {
-    isSpeakerOn = !isSpeakerOn;
-    
-    // In a real app, you would toggle the audio output here
-    speakerBtn.querySelector('div').className = isSpeakerOn ? 
-        'w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center mb-1' :
-        'w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mb-1';
-    
-    speakerBtn.querySelector('span').textContent = isSpeakerOn ? 'Speaker Off' : 'Speaker On';
-}
-
 // End call
 function endCall() {
     // Close all connections
     for (const peerId in connections) {
-        connections[peerId].call.close();
-    }
-    connections = {};
-    
-    // Stop local audio stream
-    if (audioStream) {
-        audioStream.getTracks().forEach(track => track.stop());
-        audioStream = null;
-    }
-    
-    // Hide voice chat screen
-    voiceChatScreen.classList.add('hidden');
-}
-
-// Load friends list
-function loadFriends() {
-    friendsList.innerHTML = '';
-    
-    mockUsers.forEach(user => {
-        const friend = document.createElement('div');
-        friend.className = 'flex items-center p-3 bg-gray-800 rounded-lg';
-        friend.innerHTML = `
-            <img src="${user.avatar}" alt="${user.name}" class="w-10 h-10 rounded-full mr-3">
-            <div class="flex-1">
-                <h4 class="font-medium">${user.name}</h4>
-                <p class="text-xs ${user.online ? 'text-green-500' : 'text-gray-500'}">${user.online ? 'Online' : 'Offline'}</p>
-            </div>
-            <button class="voice-btn p-2 bg-green-500 rounded-full ${!user.online ? 'opacity-50' : ''}" ${!user.online ? 'disabled' : ''}>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-            </button>
-        `;
-        
-        // Add click event to start voice chat
-        if (user.online) {
-            friend.querySelector('button').addEventListener('click', () => {
-                startVoiceChat(`Private chat with ${user.name}`, 'PVT');
-            });
-        }
-        
-        friendsList.appendChild(friend);
-    });
-}
-
-// Load groups list
-function loadGroups() {
-    groupsList.innerHTML = '';
-    
-    mockGroups.forEach(group => {
-        const groupItem = document.createElement('div');
-        groupItem.className = 'flex items-center p-3 bg-gray-800 rounded-lg';
-        groupItem.innerHTML = `
-            <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mr-3">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-            </div>
-            <div class="flex-1">
-                <h4 class="font-medium">${group.name}</h4>
-                <p class="text-xs text-gray-400">${group.members} members</p>
-            </div>
-            <button class="voice-btn p-2 bg-green-500 rounded-full">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-            </button>
-        `;
-        
-        // Add click event to join group voice chat
-        groupItem.querySelector('button').addEventListener('click', () => {
-            startVoiceChat(group.name, group.id);
-        });
-        
-        groupsList.appendChild(groupItem);
-    });
-}
-
-// Display search results
-function displaySearchResults(results) {
-    searchResults.innerHTML = '';
-    
-    if (results.length === 0) {
-        searchResults.innerHTML = '<p class="text-gray-400 text-center py-4">No users found</p>';
-        return;
-    }
-    
-    results.forEach(user => {
-        const result = document.createElement('div');
-        result.className = 'flex items-center p-3 bg-gray-700 rounded-lg';
-        result.innerHTML = `
-            <img src="${user.avatar}" alt="${user.name}" class="w-10 h-10 rounded-full mr-3">
-            <div class="flex-1">
-                <h4 class="font-medium">${user.name}</h4>
-                <p class="text-xs ${user.online ? 'text-green-500' : 'text-gray-500'}">${user.online ? 'Online' : 'Offline'}</p>
-            </div>
-            <button class="p-2 text-green-500">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                </svg>
-            </button>
-        `;
-        
-        searchResults.appendChild(result);
-    });
-}
-
-// Generate random group code
-function generateGroupCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-}
-
-// Start the app
-document.addEventListener('DOMContentLoaded', init);
+        connections[peerId].call
