@@ -1,256 +1,370 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GameVoice - Voice Chat for Gamers</title>
+    <title>Mendoan Simp - Server Minecraft Bedrock & Java</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        mendoan: {
+                            green: '#55FF55',
+                            dark: '#2D2D2D',
+                            gold: '#FFAA00',
+                            red: '#FF5555',
+                            blue: '#5555FF',
+                            brown: '#AA5500'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #121212;
-            color: white;
+        .server-card {
+            transition: all 0.3s ease;
         }
-        .tab-active {
-            border-bottom: 2px solid #4CAF50;
-            color: #4CAF50;
+        .server-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
-        .voice-btn {
-            transition: all 0.2s;
-        }
-        .voice-btn:active {
-            transform: scale(0.95);
-        }
-        .pulse {
-            animation: pulse 1.5s infinite;
+        .maintenance-badge {
+            animation: pulse 2s infinite;
         }
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
         }
     </style>
 </head>
-<body>
-    <!-- Loading Screen -->
-    <div id="loadingScreen" class="fixed inset-0 flex items-center justify-center bg-gray-900 z-50">
-        <div class="text-center">
-            <div class="w-32 h-32 mx-auto mb-6 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-            <h1 class="text-4xl font-bold text-green-500 mb-2">GameVoice</h1>
-            <p class="text-gray-400 mb-8">Premium Voice Chat for Gamers</p>
-            <button id="skipLoadingBtn" class="px-6 py-2 bg-green-500 bg-opacity-20 text-green-500 rounded-full border border-green-500 hover:bg-opacity-30 transition">
-                Tap to Continue
+<body class="bg-mendoan-dark text-white font-sans">
+    <!-- Navbar -->
+    <nav class="bg-black py-4 px-6 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+               <img src="Mendoan.png" alt="Mendoan Network Logo" class="h-8 w-8"> <!-- Sesuaikan path dan ukuran -->
+                <h1 class="text-xl font-bold text-mendoan-brown">Mendoan Simp</h1>
+            </div>
+            <div class="hidden md:flex space-x-6">
+                <a href="#home" class="hover:text-mendoan-brown transition">Beranda</a>
+                <a href="#servers" class="hover:text-mendoan-brown transition">Server</a>
+                <a href="#rules" class="hover:text-mendoan-brown transition">Rules</a>
+                <a href="#contact" class="hover:text-mendoan-brown transition">Kontak</a>
+            </div>
+            <button class="md:hidden text-xl" id="menu-toggle">
+                <i class="fas fa-bars"></i>
             </button>
         </div>
-    </div>
+        <!-- Mobile Menu -->
+        <div class="md:hidden hidden flex-col items-center space-y-4 py-4" id="mobile-menu">
+            <a href="#home" class="hover:text-mendoan-brown transition">Beranda</a>
+            <a href="#servers" class="hover:text-mendoan-brown transition">Server</a>
+            <a href="#rules" class="hover:text-mendoan-brown transition">Rules</a>
+            <a href="#contact" class="hover:text-mendoan-brown transition">Kontak</a>
+        </div>
+    </nav>
 
-    <!-- Login Screen -->
-    <div id="loginScreen" class="fixed inset-0 flex items-center justify-center bg-gray-900 z-40 hidden">
-        <div class="w-full max-w-md p-8 bg-gray-800 rounded-xl text-center">
-            <h1 class="text-3xl font-bold text-green-500 mb-2">Welcome to GameVoice</h1>
-            <p class="text-gray-400 mb-8">Premium voice chat for your gaming sessions</p>
+    <!-- Hero Section -->
+    <section id="home" class="py-20 px-6 bg-gradient-to-b from-gray-900 to-mendoan-dark">
+        <div class="container mx-auto text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 text-mendoan-brown">Mendoan Simp</h1>
+            <p class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">Server Minecraft Bedrock & Java dengan berbagai mode permainan seru!</p>
             
-            <div id="googleLoginBtn" class="w-full max-w-xs mx-auto mb-8 px-4 py-3 bg-white text-gray-800 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-100 transition">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo" class="w-6 h-6 mr-3">
-                <span>Login with Google</span>
-            </div>
-            
-            <div id="profileSetup" class="hidden">
-                <h2 class="text-xl font-semibold mb-6">Complete Your Profile</h2>
-                
-                <div class="mb-6">
-                    <div class="w-24 h-24 mx-auto rounded-full bg-gray-700 mb-2 overflow-hidden">
-                        <img id="profileImage" src="" alt="Profile" class="w-full h-full object-cover">
+            <div class="mt-12 bg-black bg-opacity-50 p-6 rounded-lg max-w-4xl mx-auto">
+                <h3 class="text-mendoan-gold text-xl mb-4">Status Server</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-gray-800 p-4 rounded">
+                        <p class="text-gray-400">Survival Server</p>
+                        <p class="text-xl font-bold"><span class="text-mendoan-green">Online</span></p>
                     </div>
-                    <button class="text-green-500 text-sm">Change Photo</button>
+                    <div class="bg-gray-800 p-4 rounded relative">
+                        <div class="maintenance-badge absolute -top-2 -right-2 bg-mendoan-red text-xs px-2 py-1 rounded-full">
+                            MAINTENANCE
+                        </div>
+                        <p class="text-gray-400">Mini Games Server</p>
+                        <p class="text-xl font-bold"><span class="text-mendoan-red">Offline</span></p>
+                    </div>
                 </div>
-                
-                <input type="text" id="usernameInput" placeholder="Choose a cool username" 
-                    class="w-full px-4 py-3 bg-gray-700 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-green-500">
-                
-                <button id="continueBtn" class="w-full py-3 bg-green-500 text-white rounded-lg font-medium disabled:opacity-50">
-                    Continue to App
-                </button>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Main App -->
-    <div id="app" class="hidden">
-        <!-- Header -->
-        <header class="bg-gray-800 p-4 flex items-center border-b border-gray-700">
-            <div class="flex items-center">
-                <img id="userAvatar" src="" alt="User" class="w-10 h-10 rounded-full mr-3">
-                <span id="usernameDisplay" class="font-medium"></span>
-            </div>
-        </header>
-
-        <!-- Main Content -->
-        <main class="flex flex-col h-[calc(100vh-56px)]">
-            <!-- Tabs -->
-            <div class="border-b border-gray-700">
-                <div class="flex">
-                    <button id="friendsTab" class="flex-1 py-4 text-center font-medium tab-active">Friends</button>
-                    <button id="groupsTab" class="flex-1 py-4 text-center font-medium">Groups</button>
-                </div>
-            </div>
-
-            <!-- Friends Tab Content -->
-            <div id="friendsContent" class="flex-1 overflow-y-auto p-4">
-                <button id="addFriendBtn" class="w-full flex items-center px-4 py-3 bg-gray-700 rounded-lg mb-4">
-                    <div class="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center mr-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
+    <!-- Servers Section -->
+    <section id="servers" class="py-16 px-6 bg-mendoan-dark">
+        <div class="container mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-12 text-mendoan-brown">Daftar Server Kami</h2>
+            
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Bedrock Server -->
+                <div class="server-card bg-gray-800 rounded-lg overflow-hidden border-2 border-blue-500">
+                    <div class="bg-blue-600 p-4 text-center">
+                        <h3 class="text-xl font-bold">BEDROCK EDITION</h3>
                     </div>
-                    <span>Add Friend</span>
-                </button>
-
-                <div id="friendsList" class="space-y-3">
-                    <!-- Friends will be added here dynamically -->
-                </div>
-            </div>
-
-            <!-- Groups Tab Content -->
-            <div id="groupsContent" class="flex-1 overflow-y-auto p-4 hidden">
-                <button id="createGroupBtn" class="w-full flex items-center px-4 py-3 bg-gray-700 rounded-lg mb-4">
-                    <div class="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center mr-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                    </div>
-                    <span>Create Group</span>
-                </button>
-
-                <button id="joinGroupBtn" class="w-full flex items-center px-4 py-3 bg-gray-700 rounded-lg mb-6">
-                    <div class="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center mr-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                        </svg>
-                    </div>
-                    <span>Join Group</span>
-                </button>
-
-                <h3 class="font-medium mb-3">Your Groups</h3>
-                <div id="groupsList" class="space-y-3">
-                    <!-- Groups will be added here dynamically -->
-                </div>
-            </div>
-
-            <!-- Add Friend Modal -->
-            <div id="addFriendModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
-                <div class="bg-gray-800 rounded-xl p-6 w-full max-w-md">
-                    <h3 class="text-xl font-semibold mb-4">Add Friend</h3>
-                    <input type="text" id="friendSearch" placeholder="Search by username..." 
-                        class="w-full px-4 py-3 bg-gray-700 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-green-500">
-                    
-                    <div id="searchResults" class="space-y-3 max-h-60 overflow-y-auto mb-4">
-                        <!-- Search results will appear here -->
-                    </div>
-                    
-                    <div class="flex justify-end space-x-3">
-                        <button id="cancelAddFriendBtn" class="px-4 py-2 text-gray-300 hover:text-white">Cancel</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Create Group Modal -->
-            <div id="createGroupModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
-                <div class="bg-gray-800 rounded-xl p-6 w-full max-w-md">
-                    <h3 class="text-xl font-semibold mb-4">Create Group</h3>
-                    <input type="text" id="groupNameInput" placeholder="Group name" 
-                        class="w-full px-4 py-3 bg-gray-700 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-green-500">
-                    
-                    <button id="confirmCreateGroupBtn" class="w-full py-3 bg-green-500 text-white rounded-lg font-medium">
-                        Create Group
-                    </button>
-                </div>
-            </div>
-
-            <!-- Group Created Modal -->
-            <div id="groupCreatedModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
-                <div class="bg-gray-800 rounded-xl p-6 w-full max-w-md text-center">
-                    <h3 class="text-xl font-semibold mb-2">Group Created!</h3>
-                    <p class="text-gray-400 mb-4">Share this code with your friends:</p>
-                    
-                    <div class="flex items-center justify-center mb-6">
-                        <div id="groupCode" class="px-6 py-3 bg-gray-700 rounded-lg text-2xl font-mono font-bold text-green-500 mr-3"></div>
-                        <button id="copyCodeBtn" class="p-2 bg-green-500 rounded-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                            </svg>
-                        </button>
-                    </div>
-                    
-                    <button id="startChattingBtn" class="w-full py-3 bg-green-500 text-white rounded-lg font-medium">
-                        Start Chatting
-                    </button>
-                </div>
-            </div>
-
-            <!-- Join Group Modal -->
-            <div id="joinGroupModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
-                <div class="bg-gray-800 rounded-xl p-6 w-full max-w-md">
-                    <h3 class="text-xl font-semibold mb-4">Join Group</h3>
-                    <input type="text" id="groupCodeInput" placeholder="Enter group code" 
-                        class="w-full px-4 py-3 bg-gray-700 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-mono uppercase">
-                    
-                    <button id="confirmJoinGroupBtn" class="w-full py-3 bg-green-500 text-white rounded-lg font-medium">
-                        Join Group
-                    </button>
-                </div>
-            </div>
-
-            <!-- Voice Chat Screen -->
-            <div id="voiceChatScreen" class="fixed inset-0 bg-gray-900 z-50 hidden">
-                <div class="h-full flex flex-col">
-                    <!-- Header -->
-                    <div class="p-4 border-b border-gray-700 text-center">
-                        <h2 id="currentGroupName" class="text-xl font-semibold"></h2>
-                        <p id="currentGroupCode" class="text-gray-400 text-sm"></p>
-                    </div>
-                    
-                    <!-- Participants -->
-                    <div id="participantsList" class="flex-1 overflow-y-auto p-4 space-y-4">
-                        <!-- Participants will be added here dynamically -->
-                    </div>
-                    
-                    <!-- Controls -->
-                    <div class="p-4 border-t border-gray-700 flex justify-around">
-                        <button id="muteBtn" class="voice-btn flex flex-col items-center">
-                            <div class="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mb-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                                </svg>
+                    <div class="p-6">
+                        <!-- Survival Server -->
+                        <div class="mb-8">
+                            <h4 class="text-lg font-bold mb-2 flex items-center">
+                                <i class="fas fa-tree text-mendoan-green mr-2"></i>
+                                Survival
+                            </h4>
+                            <div class="bg-gray-700 p-4 rounded mb-2">
+                                <p class="text-sm text-gray-400">Versi: <span class="text-white">1.20.1</span></p>
+                                <p class="text-sm text-gray-400">IP: <span class="text-white">survivalmendoan.aternos.me</span></p>
+                                <p class="text-sm text-gray-400">Port: <span class="text-white">40394</span></p>
                             </div>
-                            <span class="text-xs">Mute</span>
-                        </button>
+                            <div class="flex space-x-2">
+                                <button onclick="copyToClipboard('survivalmendoan.aternos.me')" class="bg-blue-600 hover:bg-blue-700 text-white text-sm py-1 px-3 rounded transition">
+                                    <i class="fas fa-copy mr-1"></i> Salin IP
+                                </button>
+                                <button onclick="copyToClipboard('40394')" class="bg-gray-600 hover:bg-gray-500 text-white text-sm py-1 px-3 rounded transition">
+                                    <i class="fas fa-copy mr-1"></i> Salin Port
+                                </button>
+                            </div>
+                        </div>
                         
-                        <button id="speakerBtn" class="voice-btn flex flex-col items-center">
-                            <div class="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center mb-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                                </svg>
+                        <!-- Mini Games Server -->
+                        <div>
+                            <h4 class="text-lg font-bold mb-2 flex items-center">
+                                <i class="fas fa-gamepad text-mendoan-gold mr-2"></i>
+                                Mini Games
+                            </h4>
+                            <div class="bg-gray-700 p-4 rounded mb-2 relative">
+                                <div class="maintenance-badge absolute -top-2 -right-2 bg-mendoan-red text-xs px-2 py-1 rounded-full">
+                                    MAINTENANCE
+                                </div>
+                                <p class="text-sm text-gray-400">Versi: <span class="text-white">1.20.1</span></p>
+                                <p class="text-sm text-gray-400">IP: <span class="text-white">MendooanSIMP.aternos.me:36401</span></p>
+                                <p class="text-sm text-gray-400">Port: <span class="text-white">36401</span></p>
                             </div>
-                            <span class="text-xs">Speaker</span>
-                        </button>
+                            <div class="flex space-x-2">
+                                <button onclick="copyToClipboard('MendooanSIMP.aternos.me:36401')" class="bg-blue-600 hover:bg-blue-700 text-white text-sm py-1 px-3 rounded transition">
+                                    <i class="fas fa-copy mr-1"></i> Salin IP
+                                </button>
+                                <button onclick="copyToClipboard('36401')" class="bg-gray-600 hover:bg-gray-500 text-white text-sm py-1 px-3 rounded transition">
+                                    <i class="fas fa-copy mr-1"></i> Salin Port
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Java Server -->
+                <div class="server-card bg-gray-800 rounded-lg overflow-hidden border-2 border-green-500">
+                    <div class="bg-green-600 p-4 text-center">
+                        <h3 class="text-xl font-bold">JAVA EDITION</h3>
+                    </div>
+                    <div class="p-6">
+                        <!-- Survival Server -->
+                        <div class="mb-8">
+                            <h4 class="text-lg font-bold mb-2 flex items-center">
+                                <i class="fas fa-tree text-mendoan-green mr-2"></i>
+                                Survival
+                            </h4>
+                            <div class="bg-gray-700 p-4 rounded mb-2">
+                                <p class="text-sm text-gray-400">IP: <span class="text-white">survivalmendoan.aternos.me</span></p>
+                                <p class="text-sm text-gray-400">Port: <span class="text-white">40394</span></p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="copyToClipboard('survivalmendoan.aternos.me')" class="bg-green-600 hover:bg-green-700 text-white text-sm py-1 px-3 rounded transition">
+                                    <i class="fas fa-copy mr-1"></i> Salin IP
+                                </button>
+                                <button onclick="copyToClipboard('40394')" class="bg-gray-600 hover:bg-gray-500 text-white text-sm py-1 px-3 rounded transition">
+                                    <i class="fas fa-copy mr-1"></i> Salin Port
+                                </button>
+                            </div>
+                        </div>
                         
-                        <button id="disconnectBtn" class="voice-btn flex flex-col items-center">
-                            <div class="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center mb-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
+                        <!-- Mini Games Server -->
+                        <div>
+                            <h4 class="text-lg font-bold mb-2 flex items-center">
+                                <i class="fas fa-gamepad text-mendoan-gold mr-2"></i>
+                                Mini Games
+                            </h4>
+                            <div class="bg-gray-700 p-4 rounded mb-2 relative">
+                                <div class="maintenance-badge absolute -top-2 -right-2 bg-mendoan-red text-xs px-2 py-1 rounded-full">
+                                    MAINTENANCE
+                                </div>
+                                <p class="text-sm text-gray-400">Versi: <span class="text-white">1.20.1</span></p>
+                                <p class="text-sm text-gray-400">IP: <span class="text-white">MendooanSIMP.aternos.me:36401</span></p>
+                                <p class="text-sm text-gray-400">Port: <span class="text-white">36401</span></p>
                             </div>
-                            <span class="text-xs">Disconnect</span>
-                        </button>
+                            <div class="flex space-x-2">
+                                <button onclick="copyToClipboard('MendooanSIMP.aternos.me:36401')" class="bg-green-600 hover:bg-green-700 text-white text-sm py-1 px-3 rounded transition">
+                                    <i class="fas fa-copy mr-1"></i> Salin IP
+                                </button>
+                                <button onclick="copyToClipboard('36401')" class="bg-gray-600 hover:bg-gray-500 text-white text-sm py-1 px-3 rounded transition">
+                                    <i class="fas fa-copy mr-1"></i> Salin Port
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
+            
+            <div class="mt-12 bg-gray-800 p-6 rounded-lg max-w-2xl mx-auto text-center">
+                <h3 class="text-xl font-bold mb-4 text-mendoan-brown">Cara Bergabung</h3>
+                <div class="grid md:grid-cols-3 gap-4 text-sm">
+                    <div class="bg-gray-700 p-4 rounded">
+                        <div class="text-2xl mb-2 text-mendoan-brown">
+                            <i class="fas fa-copy"></i>
+                        </div>
+                        <p>Salin IP dan Port server yang ingin dimainkan</p>
+                    </div>
+                    <div class="bg-gray-700 p-4 rounded">
+                        <div class="text-2xl mb-2 text-mendoan-brown">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <p>Buka Minecraft dan tambahkan server</p>
+                    </div>
+                    <div class="bg-gray-700 p-4 rounded">
+                        <div class="text-2xl mb-2 text-mendoan-brown">
+                            <i class="fas fa-gamepad"></i>
+                        </div>
+                        <p>Bergabung dan nikmati permainan!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    <script src="app.js"></script>
-</body>
-</html>
+    <!-- Rules Section -->
+    <section id="rules" class="py-16 px-6 bg-gray-900">
+        <div class="container mx-auto max-w-4xl">
+            <h2 class="text-3xl font-bold text-center mb-12 text-mendoan-brown">Peraturan Server</h2>
+            
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <div class="space-y-6">
+                    <div class="flex items-start">
+                        <div class="text-mendoan-red text-xl mr-4 mt-1">
+                            <i class="fas fa-ban"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg mb-1">Dilarang Keras</h3>
+                            <ul class="list-disc list-inside text-gray-300 space-y-1">
+                                <li>Menggunakan cheat/hack/mod tidak fair</li>
+                                <li>Mengganggu pemain lain (griefing, bullying)</li>
+                                <li>Spam chat atau iklan</li>
+                                <li>Exploit bug/glitch</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start">
+                        <div class="text-mendoan-green text-xl mr-4 mt-1">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg mb-1">Yang Diperbolehkan</h3>
+                            <ul class="list-disc list-inside text-gray-300 space-y-1">
+                                <li>Bermain fair dan sportif</li>
+                                <li>Membangun kreatif di area yang ditentukan</li>
+                                <li>Bekerja sama dengan pemain lain</li>
+                                <li>Melaporkan bug/cheater ke staff</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start">
+                        <div class="text-mendoan-gold text-xl mr-4 mt-1">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg mb-1">Konsekuensi</h3>
+                            <p class="text-gray-300">Pelanggaran peraturan akan berakibat pada:</p>
+                            <ul class="list-disc list-inside text-gray-300 space-y-1 mt-1">
+                                <li>Peringatan (warning)</li>
+                                <li>Kick dari server</li>
+                                <li>Ban sementara</li>
+                                <li>Ban permanen untuk pelanggaran berat</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-8 bg-gray-700 p-4 rounded text-center">
+                    <p class="text-mendoan-brown font-bold">Dengan bergabung ke server, Anda setuju untuk mematuhi semua peraturan di atas.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-16 px-6 bg-mendoan-dark">
+        <div class="container mx-auto max-w-4xl">
+            <h2 class="text-3xl font-bold text-center mb-12 text-mendoan-brown">Hubungi Kami</h2>
+            
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Media Sosial</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <i class="fab fa-discord text-indigo-400 text-xl mr-4 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold">Discord</h4>
+                                <p>discord.gg/gamerslovers</p>
+                                <button onclick="window.location.href='https://discord.gg/QCdtwbRt'" class="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm py-1 px-3 rounded transition">
+                                    Join Server Discord
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fab fa-instagram text-pink-500 text-xl mr-4 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold">Instagram</h4>
+                                <p>soon</p>
+                                <button onclick="window.location.href='https://instagram.com/'" class="mt-2 bg-pink-600 hover:bg-pink-700 text-white text-sm py-1 px-3 rounded transition">
+                                    Follow Instagram
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                  
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-black py-8 px-6">
+        <div class="container mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center space-x-2 mb-4 md:mb-0">
+                    <img src="Mendoan.png" alt="Mendoan Network Logo" class="h-8 w-8"> <!-- Sesuaikan path dan ukuran -->
+                    <h1 class="text-xl font-bold text-mendoan-brown">Mendoan Network</h1>
+                </div>
+                <div class="flex space-x-6 mb-4 md:mb-0">
+                    <a href="#" class="hover:text-mendoan-brown transition">
+                        <i class="fab fa-discord text-2xl"></i>
+                    </a>
+                    <a href="#" class="hover:text-mendoan-brown transition">
+                        <i class="fab fa-instagram text-2xl"></i>
+                    </a>
+                    <a href="#" class="hover:text-mendoan-brown transition">
+                        <i class="fab fa-youtube text-2xl"></i>
+                    </a>
+                </div>
+                <div class="text-sm text-gray-400">
+                    &copy; 2022 Mendoan Network. All Rights Reserved.
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu toggle
+        document.getElementById('menu-toggle').addEventListener('click', function() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+            menu.classList.toggle('flex');
+        });
+
+        // Copy to clipboard function
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('Berhasil
